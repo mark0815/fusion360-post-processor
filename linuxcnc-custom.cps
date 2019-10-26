@@ -10,14 +10,14 @@
   FORKID {52A5C3D6-1533-413E-B493-7B93D9E48B30}
 */
 
-description = "LinuxCNC (EMC2)";
+description = "LinuxCNC (EMC2) (Custom)";
 vendor = "LinuxCNC";
 vendorUrl = "http://www.linuxcnc.org";
 legal = "Copyright (C) 2012-2018 by Autodesk, Inc.";
 certificationLevel = 2;
 minimumRevision = 40783;
 
-longDescription = "Generic milling post for LinuxCNC (EMC2).";
+longDescription = "Generic milling post for LinuxCNC (EMC2) (Custom).";
 
 extension = "ngc";
 setCodePage("ascii");
@@ -591,31 +591,6 @@ function isProbeOperation() {
 }
 
 function onSection() {
-  var insertToolCall = isFirstSection() ||
-    currentSection.getForceToolChange && currentSection.getForceToolChange() ||
-    (tool.number != getPreviousSection().getTool().number);
-  
-  retracted = false;
-  var newWorkOffset = isFirstSection() ||
-    (getPreviousSection().workOffset != currentSection.workOffset); // work offset changes
-  var newWorkPlane = isFirstSection() ||
-    !isSameDirection(getPreviousSection().getGlobalFinalToolAxis(), currentSection.getGlobalInitialToolAxis()) ||
-    (currentSection.isOptimizedForMachine() && getPreviousSection().isOptimizedForMachine() &&
-      Vector.diff(getPreviousSection().getFinalToolAxisABC(), currentSection.getInitialToolAxisABC()).length > 1e-4) ||
-    (!machineConfiguration.isMultiAxisConfiguration() && currentSection.isMultiAxis()) ||
-    (!getPreviousSection().isMultiAxis() && currentSection.isMultiAxis() ||
-      getPreviousSection().isMultiAxis() && !currentSection.isMultiAxis()); // force newWorkPlane between indexing and simultaneous operations
-  if (insertToolCall || newWorkOffset || newWorkPlane) {
-    
-    // stop spindle before retract during tool change
-    if (insertToolCall && !isFirstSection()) {
-      onCommand(COMMAND_STOP_SPINDLE);
-    }
-    
-    // retract to safe plane
-    writeRetract(Z);
-  }
-
   if (hasParameter("operation-comment")) {
     var comment = getParameter("operation-comment");
     if (comment) {
@@ -638,11 +613,38 @@ function onSection() {
     }
   }
   
+  var insertToolCall = isFirstSection() ||
+    currentSection.getForceToolChange && currentSection.getForceToolChange() ||
+    (tool.number != getPreviousSection().getTool().number);
+  
+  retracted = false;
+  var newWorkOffset = isFirstSection() ||
+    (getPreviousSection().workOffset != currentSection.workOffset); // work offset changes
+  var newWorkPlane = isFirstSection() ||
+    !isSameDirection(getPreviousSection().getGlobalFinalToolAxis(), currentSection.getGlobalInitialToolAxis()) ||
+    (currentSection.isOptimizedForMachine() && getPreviousSection().isOptimizedForMachine() &&
+      Vector.diff(getPreviousSection().getFinalToolAxisABC(), currentSection.getInitialToolAxisABC()).length > 1e-4) ||
+    (!machineConfiguration.isMultiAxisConfiguration() && currentSection.isMultiAxis()) ||
+    (!getPreviousSection().isMultiAxis() && currentSection.isMultiAxis() ||
+      getPreviousSection().isMultiAxis() && !currentSection.isMultiAxis()); // force newWorkPlane between indexing and simultaneous operations
+
+  if (insertToolCall) {
+    setCoolant(COOLANT_OFF);
+  }
+
+  if (insertToolCall || newWorkOffset || newWorkPlane) {
+    // stop spindle before retract during tool change
+    if (insertToolCall && !isFirstSection()) {
+      onCommand(COMMAND_STOP_SPINDLE);
+    }
+    
+    // retract to safe plane
+    writeRetract(Z);
+  }
+
   if (insertToolCall) {
     forceWorkPlane();
     
-    setCoolant(COOLANT_OFF);
-  
     if (!isFirstSection() && properties.optionalStop) {
       onCommand(COMMAND_OPTIONAL_STOP);
     }
@@ -877,11 +879,6 @@ function onCyclePoint(x, y, z) {
       conditional(gPlaneModal.getCurrent() == 19, xOutput.format(cycle.clearance))
     );
     return;
-  /*
-  case "tapping-with-chip-breaking":
-  case "left-tapping-with-chip-breaking":
-  case "right-tapping-with-chip-breaking":
-  */
   }
 
   if (isFirstCyclePoint()) {
@@ -1324,9 +1321,7 @@ function onSectionEnd() {
     writeBlock(gMotionModal.format(49));
   }
   writeBlock(gPlaneModal.format(17));
-  if (!isLastSection() && (getNextSection().getTool().coolant != tool.coolant)) {
-    setCoolant(COOLANT_OFF);
-  }
+  setCoolant(COOLANT_OFF);
   if (((getCurrentSectionId() + 1) >= getNumberOfSections()) ||
       (tool.number != getNextSection().getTool().number)) {
     onCommand(COMMAND_BREAK_CONTROL);
@@ -1392,7 +1387,7 @@ function onClose() {
 
   setWorkPlane(new Vector(0, 0, 0)); // reset working plane
 
-  writeRetract(X, Y);
+  //writeRetract(X, Y);
 
   onImpliedCommand(COMMAND_END);
   onImpliedCommand(COMMAND_STOP_SPINDLE);
