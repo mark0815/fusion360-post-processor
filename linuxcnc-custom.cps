@@ -628,13 +628,10 @@ function onSection() {
     (!getPreviousSection().isMultiAxis() && currentSection.isMultiAxis() ||
       getPreviousSection().isMultiAxis() && !currentSection.isMultiAxis()); // force newWorkPlane between indexing and simultaneous operations
 
-  if (insertToolCall) {
-    setCoolant(COOLANT_OFF);
-  }
-
   if (insertToolCall || newWorkOffset || newWorkPlane) {
     // stop spindle before retract during tool change
     if (insertToolCall && !isFirstSection()) {
+      setCoolant(COOLANT_OFF);
       onCommand(COMMAND_STOP_SPINDLE);
     }
     
@@ -1322,6 +1319,7 @@ function onSectionEnd() {
   }
   writeBlock(gPlaneModal.format(17));
   setCoolant(COOLANT_OFF);
+  onCommand(COMMAND_STOP_SPINDLE)
   if (((getCurrentSectionId() + 1) >= getNumberOfSections()) ||
       (tool.number != getNextSection().getTool().number)) {
     onCommand(COMMAND_BREAK_CONTROL);
@@ -1381,7 +1379,9 @@ function writeRetract() {
 }
 
 function onClose() {
+  // To be safe, disable coolant & stop spindle before retract
   setCoolant(COOLANT_OFF);
+  onCommand(COMMAND_STOP_SPINDLE)
 
   writeRetract(Z);
 
