@@ -1318,10 +1318,10 @@ function onSectionEnd() {
     writeBlock(gMotionModal.format(49));
   }
   writeBlock(gPlaneModal.format(17));
-  setCoolant(COOLANT_OFF);
-  onCommand(COMMAND_STOP_SPINDLE)
   if (((getCurrentSectionId() + 1) >= getNumberOfSections()) ||
       (tool.number != getNextSection().getTool().number)) {
+    setCoolant(COOLANT_OFF);
+    onCommand(COMMAND_STOP_SPINDLE)
     onCommand(COMMAND_BREAK_CONTROL);
   }
 
@@ -1379,6 +1379,7 @@ function writeRetract() {
 }
 
 function onClose() {
+  writeComment('End');
   // To be safe, disable coolant & stop spindle before retract
   setCoolant(COOLANT_OFF);
   onCommand(COMMAND_STOP_SPINDLE)
